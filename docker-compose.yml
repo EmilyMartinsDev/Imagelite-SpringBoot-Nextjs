@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  db_app:
+    build: ./imageliteapi/.docker/mysql
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres  # Correto formato de chave=valor
+      - POSTGRES_DB=imagelite    # Correto formato de chave=valor
+      - POSTGRES_PASSWORD=postgres  # Correto formato de chave=valor
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./imageliteapi/.docker/mysql/data:/var/lib/postgresql/data
+    networks:
+      - imagelitenetwork
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+    ports:
+      - 8086:80
+    depends_on:
+      - db_app
+
+  sbootapp:
+    build:
+      dockerfile: Dockerfile
+      context: ./imageliteapi
+    container_name: imageliteapi
+    restart: on-failure
+    depends_on:
+      - db_app
+    ports:
+      - '8080:8080'
+    networks:
+      - imagelitenetwork
+    environment:
+      - "POSTGRES_HOST=db_app"
+
+  app:
+    build:
+      dockerfile: Dockerfile
+      context: ./imageliteapp
+    container_name: imageliteapp
+    restart: on-failure
+    depends_on:
+      - sbootapp
+    ports:
+      - '3000:3000'
+    networks:
+      - imagelitenetwork
+    expose:
+      - 3000
+
+networks:
+  imagelitenetwork:
+    driver: bridge
